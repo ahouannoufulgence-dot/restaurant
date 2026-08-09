@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useResto } from '../context/RestoContext';
 import { MenuItem, SellingUnit, SupplementOption } from '../types';
 import { 
@@ -20,7 +20,10 @@ import {
   Zap,
   Image as ImageIcon,
   CheckCircle2,
-  Info
+  Info,
+  Camera,
+  UploadCloud,
+  Upload
 } from 'lucide-react';
 
 export const MenuManagement: React.FC = () => {
@@ -62,6 +65,11 @@ export const MenuManagement: React.FC = () => {
   const [spicyLevel, setSpicyLevel] = useState<'Aucun' | 'Doux' | 'Moyen' | 'Fort'>('Aucun');
   const [supplements, setSupplements] = useState<SupplementOption[]>([]);
 
+  // Hidden File Inputs for photo upload
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cardFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [targetCardDishId, setTargetCardDishId] = useState<string | null>(null);
+
   // Temp supplement input inside modal
   const [newSuppName, setNewSuppName] = useState<string>('');
   const [newSuppPrice, setNewSuppPrice] = useState<number>(500);
@@ -74,10 +82,69 @@ export const MenuManagement: React.FC = () => {
     { name: 'Poisson Braisé', url: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=800&q=80' },
     { name: 'Riz / Atassi', url: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=80' },
     { name: 'Alloko / Plantain', url: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=800&q=80' },
-    { name: 'Suya / Brochettes', url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80' },
+    { name: 'Brochettes Suya', url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80' },
+    { name: 'Igname Pilée', url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80' },
+    { name: 'Sauce Gombo / Gbéssi', url: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80' },
     { name: 'Jus Bissap / Cocktail', url: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80' },
-    { name: 'Bière Béninoise', url: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?auto=format&fit=crop&w=800&q=80' }
+    { name: 'Bière Béninoise', url: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?auto=format&fit=crop&w=800&q=80' },
+    { name: 'Dessert / Gâteau', url: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=800&q=80' }
   ];
+
+  // Utility to compress and convert uploaded image files to Base64
+  const processImageFile = (file: File, callback: (base64Url: string) => void) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 800; // max 800px width/height for fast loading
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+          callback(compressedBase64);
+        } else {
+          callback(e.target?.result as string);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleModalPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processImageFile(file, (base64Url) => {
+        setImage(base64Url);
+        setIsIllustrativeImage(false);
+      });
+    }
+  };
+
+  const handleQuickCardPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && targetCardDishId) {
+      processImageFile(file, (base64Url) => {
+        updateMenuItem(targetCardDishId, { image: base64Url, isIllustrativeImage: false });
+        setTargetCardDishId(null);
+      });
+    }
+  };
 
   const safeMenuItems = Array.isArray(menuItems) ? menuItems : [];
 
@@ -371,6 +438,20 @@ export const MenuManagement: React.FC = () => {
                   <div className="absolute bottom-2.5 left-2.5 bg-[#0B1F33]/90 text-[#F59E0B] font-black text-xs px-3 py-1 rounded-xl border border-amber-500/30 shadow-md">
                     {formatFcfa(item.priceFcfa)} <span className="text-[10px] text-slate-300">/ {item.unit}</span>
                   </div>
+
+                  {/* Quick Photo Upload Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTargetCardDishId(item.id);
+                      cardFileInputRef.current?.click();
+                    }}
+                    className="absolute bottom-2.5 right-2.5 bg-slate-950/80 hover:bg-amber-500 text-amber-300 hover:text-slate-950 px-2.5 py-1 rounded-xl text-[10px] font-black backdrop-blur-sm transition flex items-center gap-1 border border-amber-500/30 shadow-md"
+                    title="Prendre ou choisir une photo pour ce plat"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Photo</span>
+                  </button>
                 </div>
 
                 {/* Content Body */}
@@ -631,14 +712,77 @@ export const MenuManagement: React.FC = () => {
                 />
               </div>
 
-              {/* Image URL & Quick Presets (Req 31 & 37) */}
-              <div className="bg-amber-50/50 p-3 rounded-2xl border border-amber-200 space-y-2">
-                <label className="font-black text-amber-950 block">Photo du Plat</label>
-                
-                {/* Preset quick picker */}
-                <div className="space-y-1">
-                  <span className="text-[10px] text-slate-500 font-bold block">Sélection rapide par type de plat :</span>
-                  <div className="flex flex-wrap gap-1">
+              {/* Image Upload & Presets */}
+              <div className="bg-amber-50/60 p-4 rounded-2xl border border-amber-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-black text-amber-950 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-amber-600" />
+                    <span>Photo du Plat</span>
+                  </label>
+                  {image && (
+                    <button
+                      type="button"
+                      onClick={() => setImage('')}
+                      className="text-[11px] text-red-600 hover:text-red-700 font-bold flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> Effacer
+                    </button>
+                  )}
+                </div>
+
+                {/* Live Image Preview & File Upload Box */}
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-amber-300 overflow-hidden shrink-0 flex items-center justify-center relative shadow-xs">
+                    {image ? (
+                      <img 
+                        src={image} 
+                        alt="Aperçu du plat" 
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      <div className="text-center p-2 text-slate-400">
+                        <ImageIcon className="w-8 h-8 mx-auto opacity-50 mb-1" />
+                        <span className="text-[9px] font-bold">Sans photo</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2 w-full">
+                    {/* Hidden File Input for Modal */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      onChange={handleModalPhotoUpload}
+                      className="hidden"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <UploadCloud className="w-4 h-4" />
+                      <span>Charger une photo (Téléphone / Fichier)</span>
+                    </button>
+
+                    <input
+                      type="text"
+                      placeholder="Ou coller un lien d'image (https://...)"
+                      value={image}
+                      onChange={e => setImage(e.target.value)}
+                      className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-xs font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* Preset Quick Picker */}
+                <div className="space-y-1.5 pt-1 border-t border-amber-200/60">
+                  <span className="text-[10px] text-slate-600 font-extrabold block uppercase tracking-wide">
+                    Ou sélectionner une photo haute définition dans la galerie :
+                  </span>
+                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
                     {imagePresets.map(preset => (
                       <button
                         key={preset.name}
@@ -647,21 +791,17 @@ export const MenuManagement: React.FC = () => {
                           setImage(preset.url);
                           setIsIllustrativeImage(true);
                         }}
-                        className="text-[10px] bg-white hover:bg-amber-100 text-slate-800 font-bold px-2 py-1 rounded-lg border border-amber-200 transition"
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition flex items-center gap-1 ${
+                          image === preset.url
+                            ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                            : 'bg-white hover:bg-amber-100 text-slate-800 border-amber-200'
+                        }`}
                       >
                         📷 {preset.name}
                       </button>
                     ))}
                   </div>
                 </div>
-
-                <input
-                  type="text"
-                  placeholder="Lien d'image personnalisée (https://...)"
-                  value={image}
-                  onChange={e => setImage(e.target.value)}
-                  className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-xs"
-                />
 
                 <label className="flex items-center space-x-2 text-xs font-bold text-amber-950 cursor-pointer pt-1">
                   <input
@@ -670,7 +810,7 @@ export const MenuManagement: React.FC = () => {
                     onChange={e => setIsIllustrativeImage(e.target.checked)}
                     className="rounded text-amber-600 focus:ring-amber-500"
                   />
-                  <span>Afficher la mention "Image illustrative" (Recommandé si la photo n'est pas exacte)</span>
+                  <span>Afficher la mention "Image illustrative"</span>
                 </label>
               </div>
 
@@ -801,6 +941,15 @@ export const MenuManagement: React.FC = () => {
           </form>
         </div>
       )}
+
+      {/* Hidden File Input for Quick Card Photo Upload */}
+      <input
+        type="file"
+        ref={cardFileInputRef}
+        accept="image/*"
+        onChange={handleQuickCardPhotoUpload}
+        className="hidden"
+      />
 
     </div>
   );

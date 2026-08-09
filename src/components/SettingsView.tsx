@@ -1,14 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useResto } from '../context/RestoContext';
 import { EstablishmentType } from '../types';
-import { 
-  getSupabaseUrl, 
-  getSupabaseAnonKey, 
-  saveSupabaseCredentials, 
-  isSupabaseConfigured, 
-  getSupabase, 
-  SUPABASE_SQL_SCHEMA 
-} from '../lib/supabase';
 import { 
   Settings, 
   Store, 
@@ -27,13 +19,7 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   Building2,
-  Sparkles,
-  Database,
-  Key,
-  Globe,
-  Copy,
-  ExternalLink,
-  RefreshCw
+  Sparkles
 } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
@@ -48,16 +34,6 @@ export const SettingsView: React.FC = () => {
     registeredRestaurants,
     activeRestaurantId
   } = useResto();
-
-  // Supabase State
-  const [supabaseUrlInput, setSupabaseUrlInput] = useState(getSupabaseUrl());
-  const [supabaseKeyInput, setSupabaseKeyInput] = useState(getSupabaseAnonKey());
-  const [supabaseStatus, setSupabaseStatus] = useState<'connected' | 'error' | 'none'>(
-    isSupabaseConfigured() ? 'connected' : 'none'
-  );
-  const [supabaseTestMsg, setSupabaseTestMsg] = useState<string | null>(null);
-  const [showSqlSchema, setShowSqlSchema] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
 
   const [name, setName] = useState<string>(config.name);
   const [type, setType] = useState<EstablishmentType>(config.type);
@@ -208,144 +184,7 @@ export const SettingsView: React.FC = () => {
         </button>
       </div>
 
-      {/* Supabase Production Database Card */}
-      <div className="bg-slate-900 border border-emerald-500/30 text-white p-6 rounded-3xl shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-emerald-500/20 text-emerald-400 p-3 rounded-2xl border border-emerald-500/30">
-              <Database className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-extrabold text-xs tracking-wider uppercase bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                  Base de données Production
-                </span>
-                {isSupabaseConfigured() ? (
-                  <span className="bg-emerald-500 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <Check className="w-3 h-3" /> Connecté à Supabase
-                  </span>
-                ) : (
-                  <span className="bg-amber-500/20 text-amber-300 font-bold text-[10px] px-2 py-0.5 rounded-full border border-amber-500/30">
-                    Mode Local / Démo (Clés Supabase à configurer)
-                  </span>
-                )}
-              </div>
-              <h2 className="text-lg font-black text-white mt-1">
-                Connexion Supabase (PostgreSQL Cloud)
-              </h2>
-              <p className="text-xs text-slate-300">
-                Liez votre projet Supabase pour synchroniser automatiquement les commandes, menus, tables et caisses en temps réel dans le cloud.
-              </p>
-            </div>
-          </div>
 
-          <button
-            onClick={() => setShowSqlSchema(!showSqlSchema)}
-            className="bg-slate-800 hover:bg-slate-700 text-emerald-300 font-extrabold text-xs px-4 py-2.5 rounded-xl border border-slate-700 transition flex items-center gap-2 shrink-0"
-          >
-            <Copy className="w-4 h-4" />
-            <span>{showSqlSchema ? "Masquer SQL" : "Script SQL Supabase"}</span>
-          </button>
-        </div>
-
-        {/* Supabase Inputs Form */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div>
-            <label className="font-extrabold text-slate-300 block mb-1 flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Project URL (Supabase URL)</span>
-            </label>
-            <input
-              type="text"
-              placeholder="https://your-project.supabase.co"
-              value={supabaseUrlInput}
-              onChange={e => setSupabaseUrlInput(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2.5 font-mono focus:ring-2 focus:ring-emerald-500/50"
-            />
-          </div>
-
-          <div>
-            <label className="font-extrabold text-slate-300 block mb-1 flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5 text-amber-400" />
-              <span>Anon API Key (Public)</span>
-            </label>
-            <input
-              type="password"
-              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-              value={supabaseKeyInput}
-              onChange={e => setSupabaseKeyInput(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2.5 font-mono focus:ring-2 focus:ring-emerald-500/50"
-            />
-          </div>
-        </div>
-
-        {/* Action Buttons for Supabase */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                saveSupabaseCredentials(supabaseUrlInput, supabaseKeyInput);
-                const client = getSupabase();
-                if (client) {
-                  setSupabaseStatus('connected');
-                  setSupabaseTestMsg('Identifiants Supabase enregistrés avec succès !');
-                } else {
-                  setSupabaseStatus('error');
-                  setSupabaseTestMsg('Veuillez fournir une URL et une API Key valides.');
-                }
-              }}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-5 py-2.5 rounded-xl transition flex items-center gap-2 text-xs shadow-md"
-            >
-              <Check className="w-4 h-4" />
-              <span>Enregistrer & Connecter Supabase</span>
-            </button>
-
-            <a
-              href="https://supabase.com/dashboard"
-              target="_blank"
-              rel="noreferrer"
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition"
-            >
-              <span>Dashboard Supabase</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          </div>
-
-          {supabaseTestMsg && (
-            <span className={`text-xs font-bold px-3 py-1 rounded-lg ${
-              supabaseStatus === 'connected' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
-            }`}>
-              {supabaseTestMsg}
-            </span>
-          )}
-        </div>
-
-        {/* SQL Schema Viewer */}
-        {showSqlSchema && (
-          <div className="mt-4 p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-300">
-                Copiez ce script SQL et exécutez-le dans le <strong>SQL Editor</strong> de Supabase pour créer les tables :
-              </span>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
-                  setCopiedSql(true);
-                  setTimeout(() => setCopiedSql(false), 2000);
-                }}
-                className="bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-emerald-500/30"
-              >
-                {copiedSql ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedSql ? "Copié !" : "Copier le SQL"}</span>
-              </button>
-            </div>
-
-            <pre className="text-[11px] font-mono text-emerald-400 bg-black/60 p-3 rounded-xl overflow-x-auto max-h-48 border border-slate-800 leading-snug">
-              {SUPABASE_SQL_SCHEMA}
-            </pre>
-          </div>
-        )}
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
@@ -636,8 +475,8 @@ export const SettingsView: React.FC = () => {
             </h3>
 
             <div className="space-y-2 max-h-64 overflow-y-auto text-xs pr-1">
-              {activityLogs.map(log => (
-                <div key={log.id} className="p-2 bg-slate-50 rounded-lg border space-y-0.5">
+              {activityLogs.map((log, index) => (
+                <div key={`${log.id}-${index}`} className="p-2 bg-slate-50 rounded-lg border space-y-0.5">
                   <div className="flex justify-between font-bold text-slate-800">
                     <span>{log.action}</span>
                     <span className="text-[10px] text-slate-400">

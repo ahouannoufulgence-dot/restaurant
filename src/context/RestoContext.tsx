@@ -305,7 +305,7 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setStored('suppliers', startWithTemplate ? initialSuppliers : [], newId);
     setStored('expenses', [], newId);
     setStored('activityLogs', [{
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-1-${Math.random().toString(36).substring(2, 5)}`,
       timestamp: new Date().toISOString(),
       userName: `${currentRole} RestoFlow`,
       userRole: currentRole,
@@ -325,7 +325,7 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setSuppliers(startWithTemplate ? initialSuppliers : []);
     setExpenses([]);
     setActivityLogs([{
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-2-${Math.random().toString(36).substring(2, 5)}`,
       timestamp: new Date().toISOString(),
       userName: `${currentRole} RestoFlow`,
       userRole: currentRole,
@@ -410,7 +410,7 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addLog = (action: string, details: string) => {
     const newLog: ActivityLog = {
-      id: `log-${Date.now()}`,
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       timestamp: new Date().toISOString(),
       userName: `${currentRole} RestoFlow`,
       userRole: currentRole,
@@ -434,7 +434,7 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addMenuItem = (itemData: Omit<MenuItem, 'id'>) => {
     const newItem: MenuItem = {
       ...itemData,
-      id: `prod-${Date.now()}`
+      id: `prod-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
     };
     setMenuItems(prev => [...prev, newItem]);
     addLog("Nouveau produit", `Ajout de ${newItem.name} (${formatFcfa(newItem.priceFcfa)})`);
@@ -467,7 +467,7 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!existing) return;
     const duplicated: MenuItem = {
       ...existing,
-      id: `prod-${Date.now()}`,
+      id: `prod-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       name: `${existing.name} (Copie)`,
       isPopular: false,
       isNew: true
@@ -500,7 +500,7 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addCategory = (name: string) => {
     if (!name.trim()) return;
     const newCat: Category = {
-      id: `cat-${Date.now()}`,
+      id: `cat-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       name: name.trim(),
       icon: "Utensils"
     };
@@ -520,7 +520,7 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addTable = (code: string, seats: number, zone: RestaurantTable['zone']) => {
     const newTbl: RestaurantTable = {
-      id: `tbl-${Date.now()}`,
+      id: `tbl-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       code: code.trim().toUpperCase(),
       seats,
       zone,
@@ -545,7 +545,7 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const totalFcfa = subtotalFcfa + deliveryFeeFcfa - (orderData.discountFcfa || 0);
 
     const newOrder: Order = {
-      id: `cmd-${Date.now()}`,
+      id: `cmd-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       code,
       type: orderData.type || 'Sur place',
       tableCode: orderData.tableCode,

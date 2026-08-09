@@ -300,18 +300,28 @@ export const POSRapide: React.FC = () => {
                   : 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed'
               }`}
             >
-              <div>
-                <div className="flex justify-between items-start gap-2">
-                  <h3 className="font-bold text-slate-900 text-xs sm:text-sm leading-snug">
-                    {product.name}
-                  </h3>
-                  <span className="font-black text-[#0B1F33] text-xs sm:text-sm shrink-0 bg-amber-50 text-amber-900 px-2 py-0.5 rounded-lg border border-amber-200">
-                    {formatFcfa(product.priceFcfa)}
-                  </span>
+              <div className="flex gap-2 items-start">
+                {product.image && (
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    referrerPolicy="no-referrer"
+                    className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start gap-2">
+                    <h3 className="font-bold text-slate-900 text-xs sm:text-sm leading-snug truncate">
+                      {product.name}
+                    </h3>
+                    <span className="font-black text-[#0B1F33] text-xs shrink-0 bg-amber-50 text-amber-900 px-2 py-0.5 rounded-lg border border-amber-200">
+                      {formatFcfa(product.priceFcfa)}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">
+                    {product.description}
+                  </p>
                 </div>
-                <p className="text-[11px] text-slate-500 line-clamp-2 mt-1">
-                  {product.description}
-                </p>
               </div>
 
               <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 text-[10px]">
