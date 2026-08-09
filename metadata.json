@@ -1,0 +1,6 @@
+{
+  "name": "RestoFlow Bénin",
+  "description": "Logiciel complet de gestion de restaurant, maquis, bar et fast-food adapté au contexte béninois (FCFA, Mobile Money, commandes rapides, livraison, cuisine, caisse et stock).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
