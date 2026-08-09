@@ -417,8 +417,8 @@ export const ClientTableOrderView: React.FC<ClientTableOrderViewProps> = ({
           ))}
         </div>
 
-        {/* PRODUCT CARDS GRID (1 Col on mobile, 2 Col on sm) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        {/* PRODUCT CARDS GRID (1 Col on mobile, 2 Col on sm, 3 Col on md/lg) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
           {filteredItems.length === 0 ? (
             <div className="col-span-full bg-white rounded-2xl p-8 text-center border border-slate-200 shadow-xs space-y-2">
               <Utensils className="w-10 h-10 text-slate-300 mx-auto" />

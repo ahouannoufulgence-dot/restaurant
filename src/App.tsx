@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { RestoProvider, useResto } from './context/RestoContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import { MobileBottomNav } from './components/MobileBottomNav';
 
 import { Dashboard } from './components/Dashboard';
 import { POSRapide } from './components/POSRapide';
@@ -64,7 +65,7 @@ const MainAppContent: React.FC = () => {
         />
 
         {/* Main Content Area */}
-        <main className="flex-1 lg:pl-64 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto min-w-0 transition-all duration-200">
+        <main className="flex-1 lg:pl-64 p-3 sm:p-6 lg:p-8 pb-24 lg:pb-8 max-w-7xl w-full mx-auto min-w-0 transition-all duration-200">
           
           {activeTab === 'dashboard' && <Dashboard setActiveTab={setActiveTab} />}
           {activeTab === 'pos' && <POSRapide />}
@@ -82,6 +83,14 @@ const MainAppContent: React.FC = () => {
         </main>
 
       </div>
+
+      {/* Mobile Bottom Quick Navigation */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        mobileMenuOpen={mobileMenuOpen}
+        setMobileMenuOpen={setMobileMenuOpen}
+      />
 
       {/* SaaS Registration & Tenant Switcher Modal */}
       <RestaurantRegistrationModal />

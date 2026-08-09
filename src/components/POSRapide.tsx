@@ -59,6 +59,7 @@ export const POSRapide: React.FC = () => {
     kitchenNote: string;
   }
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [mobileCartOpen, setMobileCartOpen] = useState<boolean>(false);
 
   // Checkout modal
   const [showCheckoutModal, setShowCheckoutModal] = useState<boolean>(false);
@@ -338,8 +339,12 @@ export const POSRapide: React.FC = () => {
 
       </div>
 
-      {/* RIGHT COLUMN: ACTIVE ORDER CART & CONFIGURATION (5 Cols) */}
-      <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-lg space-y-4 flex flex-col justify-between min-h-[550px]">
+      {/* RIGHT COLUMN: ACTIVE ORDER CART & CONFIGURATION (5 Cols on desktop, modal drawer on mobile) */}
+      <div className={`lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-lg space-y-4 flex flex-col justify-between min-h-[550px] ${
+        mobileCartOpen 
+          ? 'fixed inset-x-2 top-16 bottom-20 z-50 overflow-y-auto shadow-2xl ring-2 ring-amber-500' 
+          : 'hidden lg:flex'
+      }`}>
         
         {/* Order Header & Type Selection */}
         <div className="space-y-3">
@@ -349,9 +354,17 @@ export const POSRapide: React.FC = () => {
               <Smartphone className="h-5 w-5 text-[#F59E0B]" />
               <span>Saisie de Commande</span>
             </h2>
-            <span className="text-xs font-bold bg-amber-100 text-amber-900 px-2.5 py-1 rounded-full">
-              {cart.reduce((a, b) => a + b.quantity, 0)} article(s)
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold bg-amber-100 text-amber-900 px-2.5 py-1 rounded-full">
+                {cart.reduce((a, b) => a + b.quantity, 0)} article(s)
+              </span>
+              <button
+                onClick={() => setMobileCartOpen(false)}
+                className="lg:hidden p-1 rounded-lg text-slate-500 hover:text-slate-800 bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Type Selector Chips */}
@@ -574,6 +587,28 @@ export const POSRapide: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Floating Mobile Cart Bar when cart has items and drawer is closed */}
+      {cart.length > 0 && !mobileCartOpen && (
+        <div className="lg:hidden fixed bottom-16 left-3 right-3 z-30 bg-[#0B1F33] text-white p-3 rounded-2xl shadow-2xl border border-amber-500/40 flex items-center justify-between animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="bg-[#F59E0B] text-[#0B1F33] font-black px-2.5 py-1 rounded-xl text-xs">
+              {cart.reduce((a, b) => a + b.quantity, 0)}
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-extrabold text-amber-300 tracking-wider">Panier en cours</p>
+              <p className="text-sm font-black text-white">{formatFcfa(totalFcfa)}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setMobileCartOpen(true)}
+            className="bg-[#F59E0B] hover:bg-amber-400 text-[#0B1F33] font-black px-4 py-2 rounded-xl text-xs shadow-md transition flex items-center gap-1.5"
+          >
+            <span>Voir & Encaisser</span>
+            <Coins className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* CHECKOUT MODAL (FCFA + Mobile Money) */}
       {showCheckoutModal && (
