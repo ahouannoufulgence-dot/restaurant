@@ -4,7 +4,10 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 let supabaseInstance: SupabaseClient | null = null;
 
 export const getSupabaseUrl = (): string => {
-  return import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('restoflow_supabase_url') || '';
+  const rawUrl = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('restoflow_supabase_url') || '';
+  if (!rawUrl) return '';
+  // Clean trailing /rest/v1/ or slashes if present
+  return rawUrl.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
 };
 
 export const getSupabaseAnonKey = (): string => {
