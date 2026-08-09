@@ -18,6 +18,7 @@ import { StatisticsView } from './components/StatisticsView';
 import { SettingsView } from './components/SettingsView';
 import { ClientTableOrderView } from './components/ClientTableOrderView';
 import { RestaurantRegistrationModal } from './components/RestaurantRegistrationModal';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 const MainAppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -46,6 +47,9 @@ const MainAppContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col antialiased">
       
+      {/* PWA Install Banner */}
+      <PWAInstallPrompt />
+
       {/* Top Bar Navigation */}
       <Navbar 
         mobileMenuOpen={mobileMenuOpen}
