@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useResto } from '../context/RestoContext';
 import { EstablishmentType } from '../types';
+import { 
+  getSupabaseUrl, 
+  getSupabaseAnonKey, 
+  saveSupabaseCredentials, 
+  testSupabaseConnection, 
+  SUPABASE_SQL_SCHEMA, 
+  isSupabaseConfigured 
+} from '../lib/supabase';
 import { 
   Settings, 
   Store, 
@@ -19,7 +27,13 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   Building2,
-  Sparkles
+  Sparkles,
+  Database,
+  Key,
+  Globe,
+  Copy,
+  ExternalLink,
+  Server
 } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
@@ -54,6 +68,29 @@ export const SettingsView: React.FC = () => {
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [resetModalType, setResetModalType] = useState<'counters' | 'full' | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Supabase Database State
+  const [supabaseUrlInput, setSupabaseUrlInput] = useState<string>(getSupabaseUrl());
+  const [supabaseKeyInput, setSupabaseKeyInput] = useState<string>(getSupabaseAnonKey());
+  const [dbTestResult, setDbTestResult] = useState<{ success?: boolean; message?: string } | null>(null);
+  const [testingDb, setTestingDb] = useState<boolean>(false);
+  const [showSqlModal, setShowSqlModal] = useState<boolean>(false);
+  const [copiedSql, setCopiedSql] = useState<boolean>(false);
+
+  const handleSaveSupabase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    saveSupabaseCredentials(supabaseUrlInput, supabaseKeyInput);
+    setTestingDb(true);
+    const res = await testSupabaseConnection();
+    setDbTestResult(res);
+    setTestingDb(false);
+  };
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 3000);
+  };
 
   const establishmentTypes: EstablishmentType[] = [
     'Maquis',
@@ -410,6 +447,88 @@ export const SettingsView: React.FC = () => {
         {/* AUDIT LOG, SAAS RESET & PERMISSIONS GUIDE (1 Col) */}
         <div className="space-y-6">
 
+          {/* Database & Cloud Sync Card */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                <Database className="h-4 w-4 text-emerald-600" />
+                <span>Base de Données & Synchro Supabase</span>
+              </h3>
+              <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
+                isSupabaseConfigured() 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+              }`}>
+                {isSupabaseConfigured() ? 'Supabase Connecté' : 'Mode Local Active (IndexedDB)'}
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              L'application enregistre <strong>automatiquement</strong> toutes les données localement sur votre appareil. Vous pouvez également connecter un projet <strong>Supabase (PostgreSQL)</strong> gratuit pour la synchronisation multi-appareils en temps réel.
+            </p>
+
+            <form onSubmit={handleSaveSupabase} className="space-y-3 pt-1">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <Globe className="w-3 h-3 text-slate-400" />
+                  URL Supabase Project (ex: https://xyz.supabase.co)
+                </label>
+                <input
+                  type="text"
+                  placeholder="https://your-project.supabase.co"
+                  value={supabaseUrlInput}
+                  onChange={e => setSupabaseUrlInput(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <Key className="w-3 h-3 text-slate-400" />
+                  API Anon Key (Clé publique)
+                </label>
+                <input
+                  type="password"
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR..."
+                  value={supabaseKeyInput}
+                  onChange={e => setSupabaseKeyInput(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {dbTestResult && (
+                <div className={`p-3 rounded-xl border text-xs leading-relaxed ${
+                  dbTestResult.success 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}>
+                  <p className="font-bold">{dbTestResult.message}</p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={testingDb}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  <Server className="w-3.5 h-3.5" />
+                  <span>{testingDb ? 'Vérification...' : 'Connecter & Tester'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowSqlModal(true)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3 py-2.5 rounded-xl text-xs transition flex items-center gap-1"
+                  title="Voir le script SQL de création des tables"
+                >
+                  <Copy className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Script SQL</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
           {/* SaaS & Counter Reset Card */}
           <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-5 rounded-2xl border border-amber-300/50 shadow-sm space-y-3">
             <h3 className="font-black text-slate-900 text-sm flex items-center gap-2">
@@ -541,6 +660,57 @@ export const SettingsView: React.FC = () => {
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* SQL SCHEMA MODAL */}
+      {showSqlModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 text-slate-100 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 border border-slate-700 flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-extrabold text-white text-base">Script SQL Supabase pour RestoPOS Bénin</h3>
+              </div>
+              <button 
+                onClick={() => setShowSqlModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Copiez ce script et collez-le dans l'Éditeur SQL de votre tableau de bord Supabase (<strong>SQL Editor &gt; New Query &gt; Run</strong>) pour créer les tables automatiquement.
+            </p>
+
+            <div className="flex-1 overflow-y-auto bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-[11px] leading-relaxed text-emerald-300 whitespace-pre">
+              {SUPABASE_SQL_SCHEMA}
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[11px] text-slate-400">
+                {copiedSql ? '✓ Script copié dans le presse-papier !' : '11 tables avec règles RLS prêtes'}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopySql}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-md"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{copiedSql ? 'Copié !' : 'Copier le script SQL'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSqlModal(false)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2 rounded-xl text-xs transition"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
