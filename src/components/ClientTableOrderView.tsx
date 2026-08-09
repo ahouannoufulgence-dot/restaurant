@@ -47,6 +47,12 @@ export const ClientTableOrderView: React.FC<ClientTableOrderViewProps> = ({
   // Selected table token state
   const [activeToken, setActiveToken] = useState<string>(initialToken || 'tbl_tok_t01_8f9a2b');
   
+  React.useEffect(() => {
+    if (initialToken) {
+      setActiveToken(initialToken);
+    }
+  }, [initialToken]);
+  
   const currentTable = useMemo(() => {
     return getQrTableByToken(activeToken);
   }, [activeToken, getQrTableByToken, tables]);

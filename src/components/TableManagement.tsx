@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useResto } from '../context/RestoContext';
 import { TableZone, TableStatus, RestaurantTable } from '../types';
 import { 
@@ -58,77 +59,30 @@ export const TableManagement: React.FC<TableManagementProps> = ({ setActiveTab }
     setShowAddModal(false);
   };
 
-  // SVG QR Code generator component (lightweight, zero external package needed)
+  // Real, scannable QR Code generator using standard QR code matrix
   const QRCodeDisplay: React.FC<{ value: string; tableCode: string; size?: number }> = ({ value, tableCode, size = 160 }) => {
-    // Generate deterministic pattern based on URL/value string
-    const generateMatrix = (str: string) => {
-      const matrixSize = 21; // standard QR version 1 size
-      const matrix: boolean[][] = Array(matrixSize).fill(false).map(() => Array(matrixSize).fill(false));
-      
-      // Draw finder patterns (top-left, top-right, bottom-left)
-      const drawFinder = (row: number, col: number) => {
-        for (let r = 0; r < 7; r++) {
-          for (let c = 0; c < 7; c++) {
-            if (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4)) {
-              matrix[row + r][col + c] = true;
-            }
-          }
-        }
-      };
-      
-      drawFinder(0, 0);
-      drawFinder(0, matrixSize - 7);
-      drawFinder(matrixSize - 7, 0);
-
-      // Seed rest of matrix with deterministic hash
-      let hash = 0;
-      for (let i = 0; i < str.length; i++) {
-        hash = (hash << 5) - hash + str.charCodeAt(i);
-        hash |= 0;
-      }
-
-      for (let r = 0; r < matrixSize; r++) {
-        for (let c = 0; c < matrixSize; c++) {
-          // Skip finder zones
-          const inTL = r < 8 && c < 8;
-          const inTR = r < 8 && c >= matrixSize - 8;
-          const inBL = r >= matrixSize - 8 && c < 8;
-          if (!inTL && !inTR && !inBL) {
-            const val = Math.abs(Math.sin(hash + r * 31 + c * 17) * 10000);
-            matrix[r][c] = (Math.floor(val) % 2) === 0;
-          }
-        }
-      }
-      return matrix;
-    };
-
-    const matrix = generateMatrix(value);
-    const cellSize = size / matrix.length;
+    // Generate full URL so smartphone cameras (iPhone & Android) open the menu directly upon scan
+    const targetUrl = value.startsWith('http') 
+      ? value 
+      : `${window.location.origin}/commande/table/${value}`;
 
     return (
       <div className="flex flex-col items-center bg-white p-4 rounded-2xl border-2 border-slate-900 shadow-md">
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <rect width={size} height={size} fill="white" />
-          {matrix.map((row, rIdx) =>
-            row.map((cell, cIdx) =>
-              cell ? (
-                <rect
-                  key={`${rIdx}-${cIdx}`}
-                  x={cIdx * cellSize}
-                  y={rIdx * cellSize}
-                  width={cellSize}
-                  height={cellSize}
-                  fill="#0F172A"
-                />
-              ) : null
-            )
-          )}
-        </svg>
+        <div className="p-2 bg-white rounded-xl border border-slate-200">
+          <QRCodeSVG
+            value={targetUrl}
+            size={size}
+            level="H"
+            marginSize={1}
+            bgColor="#FFFFFF"
+            fgColor="#0F172A"
+          />
+        </div>
         <div className="mt-2 text-center">
           <span className="text-xs font-black tracking-widest text-slate-900 block uppercase">
             TABLE {tableCode}
           </span>
-          <span className="text-[10px] text-amber-800 font-bold block">
+          <span className="text-[10px] text-amber-800 font-bold block mt-0.5">
             Scannez pour commander le menu
           </span>
         </div>
@@ -342,8 +296,8 @@ export const TableManagement: React.FC<TableManagementProps> = ({ setActiveTab }
             <div className="bg-slate-50 p-3 rounded-xl border text-xs space-y-1">
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Lien public unique :</span>
-                <span className="font-mono text-amber-900 font-bold truncate max-w-[180px]">
-                  {selectedQrTable.qrCodeUrl || `/commande/table/${selectedQrTable.publicToken}`}
+                <span className="font-mono text-amber-900 font-bold truncate max-w-[200px]" title={`${window.location.origin}/commande/table/${selectedQrTable.publicToken || selectedQrTable.code}`}>
+                  {`${window.location.origin}/commande/table/${selectedQrTable.publicToken || selectedQrTable.code}`}
                 </span>
               </div>
               <div className="flex justify-between">

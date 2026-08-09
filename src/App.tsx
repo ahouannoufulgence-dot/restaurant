@@ -22,8 +22,11 @@ import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 const MainAppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>(() => {
-    // Detect public table URL if present
-    if (window.location.pathname.startsWith('/commande/table/')) {
+    // Detect public table URL if present in pathname or search params
+    const path = window.location.pathname;
+    const search = window.location.search;
+    const params = new URLSearchParams(search);
+    if (path.startsWith('/commande/table/') || params.has('table') || params.has('token')) {
       return 'client-menu';
     }
     return 'dashboard';
@@ -31,9 +34,16 @@ const MainAppContent: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   // Extract public table token if in URL
-  const urlToken = window.location.pathname.startsWith('/commande/table/') 
-    ? window.location.pathname.replace('/commande/table/', '') 
-    : undefined;
+  const getUrlToken = (): string | undefined => {
+    const path = window.location.pathname;
+    if (path.startsWith('/commande/table/')) {
+      return path.replace('/commande/table/', '');
+    }
+    const params = new URLSearchParams(window.location.search);
+    return params.get('table') || params.get('token') || undefined;
+  };
+
+  const urlToken = getUrlToken();
 
   if (activeTab === 'client-menu') {
     return (
