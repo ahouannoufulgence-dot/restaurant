@@ -215,11 +215,67 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => setStored('expenses', expenses), [expenses, activeRestaurantId]);
   useEffect(() => setStored('activityLogs', activityLogs), [activityLogs, activeRestaurantId]);
 
+  // BroadcastChannel & Storage Event Sync for multi-tab and live client updates
+  useEffect(() => {
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('restoflow_sync_channel');
+        
+        channel.onmessage = (event) => {
+          const { type, data, restoId } = event.data || {};
+          if (type === 'SYNC_RESTOS' && Array.isArray(data)) {
+            setRegisteredRestaurants(data);
+          } else if (type === 'SYNC_MENU' && Array.isArray(data) && (!restoId || restoId === activeRestaurantId)) {
+            setMenuItems(data);
+          } else if (type === 'SYNC_ORDERS' && Array.isArray(data) && (!restoId || restoId === activeRestaurantId)) {
+            setOrders(data);
+          }
+        };
+      }
+    } catch (e) {}
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'restoflow_registered_restaurants' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setRegisteredRestaurants(parsed);
+        } catch (err) {}
+      } else if (e.key === `restoflow_benin_${activeRestaurantId}_menuItems` && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setMenuItems(parsed);
+        } catch (err) {}
+      } else if (e.key === `restoflow_benin_${activeRestaurantId}_orders` && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setOrders(parsed);
+        } catch (err) {}
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [activeRestaurantId]);
+
   // Sync registered list and active ID
   useEffect(() => {
     try {
       localStorage.setItem('restoflow_registered_restaurants', JSON.stringify(registeredRestaurants));
       
+      // Broadcast to other tabs/windows
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        try {
+          const bc = new BroadcastChannel('restoflow_sync_channel');
+          bc.postMessage({ type: 'SYNC_RESTOS', data: registeredRestaurants });
+          bc.close();
+        } catch (e) {}
+      }
+
       // Async background push to Supabase if client exists
       const supabase = getSupabase();
       if (supabase && registeredRestaurants.length > 0) {
@@ -244,6 +300,107 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     } catch (e) {}
   }, [registeredRestaurants]);
+
+  // Async background push menuItems to Supabase & broadcast
+  useEffect(() => {
+    try {
+      // Broadcast to other tabs/windows
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        try {
+          const bc = new BroadcastChannel('restoflow_sync_channel');
+          bc.postMessage({ type: 'SYNC_MENU', data: menuItems, restoId: activeRestaurantId });
+          bc.close();
+        } catch (e) {}
+      }
+
+      const supabase = getSupabase();
+      if (supabase && menuItems.length > 0 && activeRestaurantId) {
+        const rows = menuItems.map(item => ({
+          id: item.id,
+          restaurant_id: activeRestaurantId,
+          name: item.name,
+          category_id: item.category,
+          price_fcfa: item.priceFcfa,
+          cost_price_fcfa: item.costPriceFcfa || 0,
+          description: item.description || '',
+          unit: item.unit || 'portion',
+          is_available: item.available ?? true,
+          image_url: item.image || '',
+          is_popular: item.isPopular ?? false,
+          is_new: item.isNew ?? false
+        }));
+        supabase.from('menu_items').upsert(rows).then(({ error }) => {
+          if (error) console.warn('Supabase sync warning (menu_items):', error.message);
+        });
+      }
+    } catch (e) {}
+  }, [menuItems, activeRestaurantId]);
+
+  // Pull from Supabase on activeRestaurantId change if configured
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase || !activeRestaurantId) return;
+
+    let isMounted = true;
+    
+    const fetchRemoteData = async () => {
+      try {
+        // Fetch registered restaurants
+        const { data: remoteRestos } = await supabase.from('registered_restaurants').select('*');
+        if (remoteRestos && remoteRestos.length > 0 && isMounted) {
+          const formatted = remoteRestos.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            type: r.type,
+            ownerName: r.owner_name,
+            phone: r.phone,
+            whatsappPhone: r.whatsapp_phone,
+            city: r.city,
+            neighborhood: r.neighborhood,
+            address: r.address,
+            ifuNumber: r.ifu_number,
+            pinCode: r.pin_code,
+            logoUrl: r.logo_url,
+            createdAt: r.created_at
+          }));
+          setRegisteredRestaurants(prev => {
+            const merged = [...formatted];
+            prev.forEach(localItem => {
+              if (!merged.find(m => m.id === localItem.id)) {
+                merged.push(localItem);
+              }
+            });
+            return merged;
+          });
+        }
+
+        // Fetch menu items for active restaurant
+        const { data: remoteMenu } = await supabase.from('menu_items').select('*').eq('restaurant_id', activeRestaurantId);
+        if (remoteMenu && remoteMenu.length > 0 && isMounted) {
+          const formattedMenu: MenuItem[] = remoteMenu.map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            category: m.category_id,
+            priceFcfa: Number(m.price_fcfa),
+            costPriceFcfa: Number(m.cost_price_fcfa || 0),
+            description: m.description || '',
+            unit: m.unit || 'portion',
+            available: m.is_available ?? true,
+            image: m.image_url || '',
+            isPopular: m.is_popular ?? false,
+            isNew: m.is_new ?? false
+          }));
+          setMenuItems(formattedMenu);
+        }
+      } catch (err) {
+        console.warn('Background Supabase pull skipped:', err);
+      }
+    };
+
+    fetchRemoteData();
+
+    return () => { isMounted = false; };
+  }, [activeRestaurantId]);
 
   useEffect(() => {
     try {

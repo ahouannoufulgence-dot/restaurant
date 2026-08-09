@@ -452,81 +452,90 @@ export const SettingsView: React.FC = () => {
             <div className="flex items-center justify-between">
               <h3 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
                 <Database className="h-4 w-4 text-emerald-600" />
-                <span>Base de Données & Synchro Supabase</span>
+                <span>Base de Données & Synchronisation Client</span>
               </h3>
-              <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
-                isSupabaseConfigured() 
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                  : 'bg-amber-50 text-amber-700 border-amber-200'
-              }`}>
-                {isSupabaseConfigured() ? 'Supabase Connecté' : 'Mode Local Active (IndexedDB)'}
+              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Synchro Automatique Active
               </span>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed">
-              L'application enregistre <strong>automatiquement</strong> toutes les données localement sur votre appareil. Vous pouvez également connecter un projet <strong>Supabase (PostgreSQL)</strong> gratuit pour la synchronisation multi-appareils en temps réel.
-            </p>
+            <div className="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-100 space-y-2">
+              <p className="text-xs text-emerald-950 font-medium leading-relaxed">
+                ✅ <strong>Aucune configuration requise pour le client :</strong> Tous les restaurants inscrits, les photos de vos plats, les menus et les commandes par QR code sont enregistrés et synchronisés <strong>automatiquement</strong> en arrière-plan.
+              </p>
+              <p className="text-[11px] text-emerald-800 leading-relaxed">
+                Les photos de plats et les données sont partagées en temps réel entre le système de caisse et les téléphones des clients sur les tables.
+              </p>
+            </div>
 
-            <form onSubmit={handleSaveSupabase} className="space-y-3 pt-1">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                  <Globe className="w-3 h-3 text-slate-400" />
-                  URL Supabase Project (ex: https://xyz.supabase.co)
-                </label>
-                <input
-                  type="text"
-                  placeholder="https://your-project.supabase.co"
-                  value={supabaseUrlInput}
-                  onChange={e => setSupabaseUrlInput(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
+            <details className="group pt-1">
+              <summary className="text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer flex items-center justify-between py-1">
+                <span>⚙️ Configuration Supabase Personnalisée (Optionnel pour Développeurs)</span>
+                <span className="text-[10px] text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+              </summary>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                  <Key className="w-3 h-3 text-slate-400" />
-                  API Anon Key (Clé publique)
-                </label>
-                <input
-                  type="password"
-                  placeholder="eyJhbGciOiJIUzI1NiIsInR..."
-                  value={supabaseKeyInput}
-                  onChange={e => setSupabaseKeyInput(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              {dbTestResult && (
-                <div className={`p-3 rounded-xl border text-xs leading-relaxed ${
-                  dbTestResult.success 
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-                    : 'bg-amber-50 border-amber-200 text-amber-900'
-                }`}>
-                  <p className="font-bold">{dbTestResult.message}</p>
+              <form onSubmit={handleSaveSupabase} className="space-y-3 pt-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+                    <Globe className="w-3 h-3 text-slate-400" />
+                    URL Projet Supabase (ex: https://xyz.supabase.co)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="https://your-project.supabase.co"
+                    value={supabaseUrlInput}
+                    onChange={e => setSupabaseUrlInput(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
                 </div>
-              )}
 
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="submit"
-                  disabled={testingDb}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  <Server className="w-3.5 h-3.5" />
-                  <span>{testingDb ? 'Vérification...' : 'Connecter & Tester'}</span>
-                </button>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+                    <Key className="w-3 h-3 text-slate-400" />
+                    Clé API Anon Supabase
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR..."
+                    value={supabaseKeyInput}
+                    onChange={e => setSupabaseKeyInput(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowSqlModal(true)}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3 py-2.5 rounded-xl text-xs transition flex items-center gap-1"
-                  title="Voir le script SQL de création des tables"
-                >
-                  <Copy className="w-3.5 h-3.5 text-slate-600" />
-                  <span>Script SQL</span>
-                </button>
-              </div>
-            </form>
+                {dbTestResult && (
+                  <div className={`p-3 rounded-xl border text-xs leading-relaxed ${
+                    dbTestResult.success 
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                      : 'bg-amber-50 border-amber-200 text-amber-900'
+                  }`}>
+                    <p className="font-bold">{dbTestResult.message}</p>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="submit"
+                    disabled={testingDb}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Server className="w-3.5 h-3.5" />
+                    <span>{testingDb ? 'Vérification...' : 'Connecter un projet perso'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowSqlModal(true)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1"
+                    title="Voir le script SQL de création des tables"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Script SQL</span>
+                  </button>
+                </div>
+              </form>
+            </details>
           </div>
 
           {/* SaaS & Counter Reset Card */}
