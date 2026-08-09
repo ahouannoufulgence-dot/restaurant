@@ -74,24 +74,120 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
       {/* Banner / Welcome */}
       <div className="bg-gradient-to-r from-[#0B1F33] to-slate-900 text-white p-6 rounded-2xl shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="bg-[#F59E0B] text-[#0B1F33] font-bold text-xs px-2.5 py-1 rounded-full uppercase tracking-wide">
-            {config.type} Béninois
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="bg-[#F59E0B] text-[#0B1F33] font-bold text-xs px-2.5 py-1 rounded-full uppercase tracking-wide">
+              {config.type} Béninois
+            </span>
+            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Synchro Cloud Active
+            </span>
+          </div>
           <h1 className="text-2xl font-black text-white mt-2">
             Tableau de Bord - {config.name}
           </h1>
           <p className="text-sm text-slate-300 mt-1">
-            Gérez vos commandes, encaissements Mobile Money et stocks en temps réel en FCFA.
+            Application simplifiée pour la gestion rapide de votre établissement.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('pos')}
             className="bg-[#F59E0B] hover:bg-[#d98805] text-[#0B1F33] font-extrabold px-5 py-3 rounded-xl transition flex items-center gap-2 shadow-lg active:scale-95 text-sm"
           >
             <Smartphone className="h-5 w-5" />
-            <span>Prendre Commande</span>
+            <span>Commande Rapide (POS)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* QUICK SIMPLIFIED ACTION CARDS */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+            <span>⚡ Actions Rapides (Accès Direct 1-Clic)</span>
+          </h2>
+          <span className="text-xs text-slate-500 font-medium hidden sm:inline">Toutes les opérations essentielles réunies</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <button
+            onClick={() => setActiveTab('pos')}
+            className="p-3.5 bg-amber-50 hover:bg-amber-100/80 border border-amber-200/80 rounded-xl text-left transition flex flex-col items-start gap-2 group active:scale-98"
+          >
+            <div className="p-2 bg-amber-500 text-slate-900 rounded-lg font-black group-hover:scale-110 transition-transform">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-amber-950">1. Prendre Commande</p>
+              <p className="text-[10px] text-amber-800 leading-tight">Caisse POS & Vente rapide</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('client-menu')}
+            className="p-3.5 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/80 rounded-xl text-left transition flex flex-col items-start gap-2 group active:scale-98"
+          >
+            <div className="p-2 bg-emerald-600 text-white rounded-lg font-black group-hover:scale-110 transition-transform">
+              <PlusCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-emerald-950">2. QR Code Client</p>
+              <p className="text-[10px] text-emerald-800 leading-tight">Commander depuis la table</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('menu')}
+            className="p-3.5 bg-blue-50 hover:bg-blue-100/80 border border-blue-200/80 rounded-xl text-left transition flex flex-col items-start gap-2 group active:scale-98"
+          >
+            <div className="p-2 bg-blue-600 text-white rounded-lg font-black group-hover:scale-110 transition-transform">
+              <ChefHat className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-blue-950">3. Menu & Plats</p>
+              <p className="text-[10px] text-blue-800 leading-tight">Modifier plats & tarifs</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('commandes')}
+            className="p-3.5 bg-purple-50 hover:bg-purple-100/80 border border-purple-200/80 rounded-xl text-left transition flex flex-col items-start gap-2 group active:scale-98"
+          >
+            <div className="p-2 bg-purple-600 text-white rounded-lg font-black group-hover:scale-110 transition-transform">
+              <ShoppingBag className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-purple-950">4. Suivi Commandes</p>
+              <p className="text-[10px] text-purple-800 leading-tight">Valider & encaisser</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('caisse')}
+            className="p-3.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl text-left transition flex flex-col items-start gap-2 group active:scale-98"
+          >
+            <div className="p-2 bg-slate-800 text-amber-400 rounded-lg font-black group-hover:scale-110 transition-transform">
+              <Coins className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900">5. Caisse du Jour</p>
+              <p className="text-[10px] text-slate-600 leading-tight">Session & Clôture</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('statistiques')}
+            className="p-3.5 bg-[#0B1F33] hover:bg-slate-800 text-white border border-slate-800 rounded-xl text-left transition flex flex-col items-start gap-2 group active:scale-98"
+          >
+            <div className="p-2 bg-[#F59E0B] text-[#0B1F33] rounded-lg font-black group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-white">6. Chiffres & Bilan</p>
+              <p className="text-[10px] text-slate-300 leading-tight">Rapports de ventes</p>
+            </div>
           </button>
         </div>
       </div>

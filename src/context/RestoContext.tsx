@@ -336,7 +336,46 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) {}
   }, [menuItems, activeRestaurantId]);
 
-  // Pull from Supabase on activeRestaurantId change if configured
+  // Async background push orders to Supabase & broadcast
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        try {
+          const bc = new BroadcastChannel('restoflow_sync_channel');
+          bc.postMessage({ type: 'SYNC_ORDERS', data: orders, restoId: activeRestaurantId });
+          bc.close();
+        } catch (e) {}
+      }
+
+      const supabase = getSupabase();
+      if (supabase && orders.length > 0 && activeRestaurantId) {
+        const rows = orders.map(order => ({
+          id: order.id,
+          restaurant_id: activeRestaurantId,
+          code: order.code,
+          type: order.type,
+          table_code: order.tableCode || null,
+          status: order.status,
+          items: order.items,
+          subtotal_amount: order.subtotalFcfa,
+          delivery_fee: order.deliveryFeeFcfa || 0,
+          discount_amount: order.discountFcfa || 0,
+          total_amount: order.totalFcfa,
+          payment_method: order.paymentMethod || null,
+          payment_status: order.paymentStatus || 'En attente',
+          customer_name: order.customerName || null,
+          customer_phone: order.customerPhone || null,
+          delivery_address: order.deliveryAddress || null,
+          created_at: order.createdAt || new Date().toISOString()
+        }));
+        supabase.from('orders').upsert(rows).then(({ error }) => {
+          if (error) console.warn('Supabase sync warning (orders):', error.message);
+        });
+      }
+    } catch (e) {}
+  }, [orders, activeRestaurantId]);
+
+  // Pull from Supabase on activeRestaurantId change & polling if configured
   useEffect(() => {
     const supabase = getSupabase();
     if (!supabase || !activeRestaurantId) return;
@@ -392,14 +431,51 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }));
           setMenuItems(formattedMenu);
         }
+
+        // Fetch orders for active restaurant
+        const { data: remoteOrders } = await supabase.from('orders').select('*').eq('restaurant_id', activeRestaurantId);
+        if (remoteOrders && remoteOrders.length > 0 && isMounted) {
+          const formattedOrders: Order[] = remoteOrders.map((o: any) => ({
+            id: o.id,
+            code: o.code || `CMD-${o.id.slice(-4)}`,
+            createdAt: o.created_at || new Date().toISOString(),
+            updatedAt: o.updated_at || o.created_at || new Date().toISOString(),
+            type: o.type || 'Sur place',
+            tableCode: o.table_code || undefined,
+            status: o.status || 'En attente',
+            items: Array.isArray(o.items) ? o.items : [],
+            subtotalFcfa: Number(o.subtotal_amount || 0),
+            deliveryFeeFcfa: Number(o.delivery_fee || 0),
+            discountFcfa: Number(o.discount_amount || 0),
+            totalFcfa: Number(o.total_amount || 0),
+            paymentStatus: o.payment_status || 'En attente',
+            payments: [],
+            createdByRole: 'Client',
+            createdByName: o.customer_name || 'Client QR',
+            customer: o.customer_name ? { name: o.customer_name, phone: o.customer_phone || '' } : undefined
+          }));
+          setOrders(prev => {
+            const merged = [...formattedOrders];
+            prev.forEach(localOrder => {
+              if (!merged.find(m => m.id === localOrder.id)) {
+                merged.push(localOrder);
+              }
+            });
+            return merged;
+          });
+        }
       } catch (err) {
         console.warn('Background Supabase pull skipped:', err);
       }
     };
 
     fetchRemoteData();
+    const interval = setInterval(fetchRemoteData, 10000);
 
-    return () => { isMounted = false; };
+    return () => { 
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [activeRestaurantId]);
 
   useEffect(() => {
