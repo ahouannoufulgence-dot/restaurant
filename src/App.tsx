@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RestoProvider, useResto } from './context/RestoContext';
+import { isTabAllowedForRole, getDefaultHomeTabForRole } from './lib/permissions';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -17,10 +18,13 @@ import { ExpensesAndFinancesView } from './components/ExpensesAndFinancesView';
 import { StatisticsView } from './components/StatisticsView';
 import { SettingsView } from './components/SettingsView';
 import { ClientTableOrderView } from './components/ClientTableOrderView';
+import { StaffManagement } from './components/StaffManagement';
 import { RestaurantRegistrationModal } from './components/RestaurantRegistrationModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 const MainAppContent: React.FC = () => {
+  const { mvpRole } = useResto();
+
   const [activeTab, setActiveTab] = useState<string>(() => {
     // Detect public table URL if present in pathname or search params
     const path = window.location.pathname;
@@ -29,9 +33,17 @@ const MainAppContent: React.FC = () => {
     if (path.startsWith('/commande/table/') || params.has('table') || params.has('token')) {
       return 'client-menu';
     }
-    return 'dashboard';
+    return getDefaultHomeTabForRole(mvpRole);
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (activeTab === 'client-menu') return;
+    if (!isTabAllowedForRole(activeTab, mvpRole)) {
+      const defaultTab = getDefaultHomeTabForRole(mvpRole);
+      setActiveTab(defaultTab);
+    }
+  }, [mvpRole, activeTab]);
 
   // Extract public table token if in URL
   const getUrlToken = (): string | undefined => {
@@ -92,6 +104,7 @@ const MainAppContent: React.FC = () => {
           {activeTab === 'livraisons' && <DeliveriesView />}
           {activeTab === 'finances' && <ExpensesAndFinancesView />}
           {activeTab === 'statistiques' && <StatisticsView />}
+          {activeTab === 'personnel' && <StaffManagement />}
           {activeTab === 'parametres' && <SettingsView />}
 
         </main>

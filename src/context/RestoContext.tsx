@@ -1,5 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { getSupabase } from '../lib/supabase';
+import { authenticateWithPin } from '../lib/authPin';
+import { 
+  MvpUserRole, 
+  RolePermissions, 
+  getPermissionsForRole, 
+  ROLE_LABELS 
+} from '../lib/permissions';
 import { 
   UserRole, 
   EstablishmentConfig, 
@@ -19,8 +26,33 @@ import {
   PaymentInfo,
   TableStatus,
   DeliveryDetails,
-  RegisteredRestaurant
+  RegisteredRestaurant,
+  StaffMember
 } from '../types';
+
+export function normalizeMvpRole(role: string): MvpUserRole {
+  switch (role) {
+    case 'PROPRIETAIRE':
+    case 'owner':
+    case 'Administrateur':
+    case 'Manager':
+      return 'PROPRIETAIRE';
+    case 'CUISINE':
+    case 'kitchen':
+    case 'Chef':
+      return 'CUISINE';
+    case 'EMPLOYE':
+    case 'employee':
+    case 'GERANT':
+    case 'SERVEUR':
+    case 'CAISSIER':
+    case 'Serveur':
+    case 'Caissier':
+    case 'Client':
+    default:
+      return 'EMPLOYE';
+  }
+}
 import { 
   initialEstablishmentConfig, 
   initialCategories, 
@@ -37,9 +69,17 @@ import {
 interface RestoContextType {
   // Current session & role
   currentRole: UserRole;
+  mvpRole: MvpUserRole;
+  permissions: RolePermissions;
   setCurrentRole: (role: UserRole) => void;
   config: EstablishmentConfig;
   updateConfig: (newConfig: Partial<EstablishmentConfig>) => void;
+
+  // Staff & Personnel
+  staffMembers: StaffMember[];
+  addStaffMember: (member: Omit<StaffMember, 'id' | 'createdAt'>) => void;
+  updateStaffMember: (id: string, updates: Partial<StaffMember>) => void;
+  deleteStaffMember: (id: string) => void;
 
   // Categories & Menu Items
   categories: Category[];
@@ -138,6 +178,36 @@ const defaultInitialRegisteredRestaurants: RegisteredRestaurant[] = [
   }
 ];
 
+const defaultInitialStaffMembers: StaffMember[] = [
+  {
+    id: 'staff_1',
+    name: 'Fulgence A. (Propriétaire)',
+    phone: '+229 97 00 11 22',
+    role: 'PROPRIETAIRE',
+    pinCode: '1234',
+    active: true,
+    createdAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'staff_2',
+    name: 'Amina C. (Employé - Serveuse & Caisse)',
+    phone: '+229 95 22 33 44',
+    role: 'EMPLOYE',
+    pinCode: '3333',
+    active: true,
+    createdAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'staff_3',
+    name: 'Chef Bio (Cuisine)',
+    phone: '+229 93 44 55 66',
+    role: 'CUISINE',
+    pinCode: '5555',
+    active: true,
+    createdAt: '2026-01-01T00:00:00.000Z'
+  }
+];
+
 export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Active Restaurant ID and Registered Restaurants List
   const [registeredRestaurants, setRegisteredRestaurants] = useState<RegisteredRestaurant[]>(() => {
@@ -190,7 +260,11 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // State initialization for active restaurant
-  const [currentRole, setCurrentRoleState] = useState<UserRole>(() => getStored('role', 'Administrateur'));
+  const [currentRole, setCurrentRoleState] = useState<UserRole>(() => getStored('role', 'PROPRIETAIRE'));
+  const mvpRole = useMemo(() => normalizeMvpRole(currentRole), [currentRole]);
+  const permissions = useMemo(() => getPermissionsForRole(mvpRole), [mvpRole]);
+
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>(() => getStored('staffMembers', defaultInitialStaffMembers));
   const [config, setConfig] = useState<EstablishmentConfig>(() => getStored('config', initialEstablishmentConfig));
   const [categories, setCategories] = useState<Category[]>(() => getStored('categories', initialCategories));
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => getStored('menuItems', initialMenuItems));
@@ -204,6 +278,7 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Sync state changes to scoped localStorage
   useEffect(() => setStored('role', currentRole), [currentRole, activeRestaurantId]);
+  useEffect(() => setStored('staffMembers', staffMembers), [staffMembers, activeRestaurantId]);
   useEffect(() => setStored('config', config), [config, activeRestaurantId]);
   useEffect(() => setStored('categories', categories), [categories, activeRestaurantId]);
   useEffect(() => setStored('menuItems', menuItems), [menuItems, activeRestaurantId]);
@@ -214,6 +289,24 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => setStored('suppliers', suppliers), [suppliers, activeRestaurantId]);
   useEffect(() => setStored('expenses', expenses), [expenses, activeRestaurantId]);
   useEffect(() => setStored('activityLogs', activityLogs), [activityLogs, activeRestaurantId]);
+
+  // Staff management functions
+  const addStaffMember = (member: Omit<StaffMember, 'id' | 'createdAt'>) => {
+    const newMember: StaffMember = {
+      ...member,
+      id: `staff_${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    setStaffMembers(prev => [newMember, ...prev]);
+  };
+
+  const updateStaffMember = (id: string, updates: Partial<StaffMember>) => {
+    setStaffMembers(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
+  };
+
+  const deleteStaffMember = (id: string) => {
+    setStaffMembers(prev => prev.filter(m => m.id !== id));
+  };
 
   // BroadcastChannel & Storage Event Sync for multi-tab and live client updates
   useEffect(() => {
@@ -411,6 +504,13 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             });
             return merged;
           });
+
+          // Auto-sync active establishment: if active is default 'rest_pirogue' and custom exists
+          const customResto = formatted.find(r => r.id !== 'rest_pirogue');
+          const explicitChoice = localStorage.getItem('restoflow_user_explicit_resto');
+          if (customResto && activeRestaurantId === 'rest_pirogue' && !explicitChoice) {
+            switchActiveRestaurant(customResto.id);
+          }
         }
 
         // Fetch menu items for active restaurant
@@ -482,7 +582,18 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       localStorage.setItem('restoflow_active_restaurant_id', activeRestaurantId);
     } catch (e) {}
-  }, [activeRestaurantId]);
+
+    // Auto-authenticate with Supabase Auth using the PIN of the active establishment
+    const currentResto = registeredRestaurants.find(r => r.id === activeRestaurantId);
+    const pin = currentResto?.pinCode || '1234';
+    authenticateWithPin(activeRestaurantId, pin).then((res) => {
+      if (res.success) {
+        console.log(`[Supabase Auth] Authentifié par PIN pour '${activeRestaurantId}'. auth.uid() =`, res.userId);
+      } else {
+        console.warn(`[Supabase Auth] PIN Auth (${activeRestaurantId}):`, res.error);
+      }
+    });
+  }, [activeRestaurantId, registeredRestaurants]);
 
   // MULTI-TENANT SaaS REGISTRATION & SWITCHING
   const registerRestaurant = (
@@ -576,6 +687,10 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const targetResto = registeredRestaurants.find(r => r.id === targetId);
     if (!targetResto) return;
 
+    try {
+      localStorage.setItem('restoflow_user_explicit_resto', targetId);
+    } catch (e) {}
+
     // Save current active state before switching
     setStored('config', config, activeRestaurantId);
     setStored('categories', categories, activeRestaurantId);
@@ -609,7 +724,16 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       deliveryZones: [{ zone: "Centre-Ville", defaultFeeFcfa: 500 }]
     }, targetId);
 
-    setConfig(loadedConfig);
+    const mergedConfig = {
+      ...loadedConfig,
+      name: targetResto.name || loadedConfig.name,
+      type: targetResto.type || loadedConfig.type,
+      phone: targetResto.phone || loadedConfig.phone,
+      city: targetResto.city || loadedConfig.city,
+      neighborhood: targetResto.neighborhood || loadedConfig.neighborhood
+    };
+
+    setConfig(mergedConfig);
     setCategories(getStored('categories', initialCategories, targetId));
     setMenuItems(getStored('menuItems', initialMenuItems, targetId));
     setTables(getStored('tables', initialTables, targetId));
@@ -1069,27 +1193,56 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   ): Order => {
     const table = getQrTableByToken(tableToken);
     if (!table) {
-      throw new Error("Table non trouvée ou invalide.");
+      throw new Error("Table non trouvée ou jeton QR invalide.");
     }
 
     if (table.qrCodeStatus === 'Désactivé') {
-      throw new Error("Le QR code de cette table est temporairement désactivé.");
+      throw new Error("Le QR code de cette table est actuellement désactivé par le restaurant.");
     }
+
+    if (!items || items.length === 0) {
+      throw new Error("Votre commande ne contient aucun article.");
+    }
+
+    // Rate limiting anti-abuse check: prevent double-tap within 10 seconds on same device
+    const lastQrTimestamp = localStorage.getItem('last_qr_order_time');
+    if (lastQrTimestamp) {
+      const elapsed = Date.now() - parseInt(lastQrTimestamp, 10);
+      if (elapsed < 10000) {
+        const remainingSec = Math.ceil((10000 - elapsed) / 1000);
+        throw new Error(`Protection anti-spam : veuillez patienter encore ${remainingSec} seconde(s) avant de renvoyer une commande.`);
+      }
+    }
+
+    // Authoritative Price Recalculation & Availability Check from catalog
+    const verifiedItems: OrderItem[] = items.map((it, idx) => {
+      // Find item in authoritative menu catalog
+      const catalogItem = menuItems.find(m => m.id === it.menuItemId || m.name.toLowerCase() === it.menuItemName.toLowerCase());
+      
+      if (catalogItem && !catalogItem.available) {
+        throw new Error(`Le plat "${catalogItem.name}" n'est plus disponible au menu pour le moment.`);
+      }
+
+      // Authoritative unit price from context catalog (reject client price tampering)
+      const authoritativeUnitPrice = catalogItem ? catalogItem.priceFcfa : it.unitPriceFcfa;
+
+      return {
+        ...it,
+        id: `item-${Date.now()}-${idx}`,
+        unitPriceFcfa: authoritativeUnitPrice,
+        status: 'En attente'
+      };
+    });
+
+    const subtotalFcfa = verifiedItems.reduce((acc, item) => {
+      const itemSupplements = (item.selectedSupplements || []).reduce((sAcc, s) => sAcc + s.priceFcfa, 0);
+      return acc + (item.unitPriceFcfa + itemSupplements) * item.quantity;
+    }, 0);
 
     const orderCount = orders.length + 101;
     const code = `CMD-${orderCount}`;
     const now = new Date().toISOString();
-
-    const fullItems: OrderItem[] = items.map((it, idx) => ({
-      ...it,
-      id: `item-${Date.now()}-${idx}`,
-      status: 'En attente'
-    }));
-
-    const subtotalFcfa = fullItems.reduce((acc, item) => {
-      const itemSupplements = (item.selectedSupplements || []).reduce((sAcc, s) => sAcc + s.priceFcfa, 0);
-      return acc + (item.unitPriceFcfa + itemSupplements) * item.quantity;
-    }, 0);
+    const orderAccessToken = `ord_tok_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     const newOrder: Order = {
       id: `cmd-${Date.now()}`,
@@ -1104,7 +1257,7 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         name: customerName || 'Client QR',
         phone: customerPhone || ''
       } : undefined,
-      items: fullItems,
+      items: verifiedItems,
       subtotalFcfa,
       deliveryFeeFcfa: 0,
       discountFcfa: 0,
@@ -1116,8 +1269,19 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       createdByName: customerName ? `${customerName} (QR Table ${table.code})` : `Client QR (Table ${table.code})`,
       paymentStatus: 'En attente',
       payments: [],
-      generalNote
+      generalNote,
+      orderAccessToken
     };
+
+    // Store last order timestamp for anti-spam rate limiting
+    localStorage.setItem('last_qr_order_time', String(Date.now()));
+
+    // Store order access token in client device history
+    try {
+      const existingTokens = JSON.parse(localStorage.getItem('qr_client_order_tokens') || '[]');
+      existingTokens.unshift(orderAccessToken);
+      localStorage.setItem('qr_client_order_tokens', JSON.stringify(existingTokens.slice(0, 20)));
+    } catch (e) {}
 
     setOrders(prev => [newOrder, ...prev]);
 
@@ -1261,7 +1425,13 @@ export const RestoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <RestoContext.Provider value={{
       currentRole,
+      mvpRole,
+      permissions,
       setCurrentRole,
+      staffMembers,
+      addStaffMember,
+      updateStaffMember,
+      deleteStaffMember,
       config,
       updateConfig,
       categories,

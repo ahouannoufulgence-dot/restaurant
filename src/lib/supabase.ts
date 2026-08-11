@@ -3,11 +3,19 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 // Lazy initialization of Supabase client to avoid crash if keys are missing
 let supabaseInstance: SupabaseClient | null = null;
 
+export const cleanSupabaseUrl = (url: string): string => {
+  if (!url) return '';
+  let cleaned = url.trim();
+  // Strip any trailing /rest/v1 or slashes recursively
+  while (/\/rest\/v1\/?$/i.test(cleaned) || /\/+$/.test(cleaned)) {
+    cleaned = cleaned.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+  }
+  return cleaned;
+};
+
 export const getSupabaseUrl = (): string => {
   const rawUrl = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('restoflow_supabase_url') || '';
-  if (!rawUrl) return '';
-  // Clean trailing /rest/v1/ or slashes if present
-  return rawUrl.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+  return cleanSupabaseUrl(rawUrl);
 };
 
 export const getSupabaseAnonKey = (): string => {
@@ -37,7 +45,8 @@ export const getSupabase = (): SupabaseClient | null => {
 };
 
 export const saveSupabaseCredentials = (url: string, key: string) => {
-  if (url) localStorage.setItem('restoflow_supabase_url', url.trim());
+  const cleanedUrl = cleanSupabaseUrl(url);
+  if (cleanedUrl) localStorage.setItem('restoflow_supabase_url', cleanedUrl);
   else localStorage.removeItem('restoflow_supabase_url');
 
   if (key) localStorage.setItem('restoflow_supabase_anon_key', key.trim());

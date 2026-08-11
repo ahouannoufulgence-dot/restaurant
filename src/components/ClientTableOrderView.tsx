@@ -212,11 +212,25 @@ export const ClientTableOrderView: React.FC<ClientTableOrderViewProps> = ({
     "Beaucoup de sauce"
   ];
 
-  // Current table active live orders status
-  const currentTableLiveOrders = useMemo(() => {
+  // Saved private client order tokens from localStorage for strict order isolation
+  const [clientOrderTokens, setClientOrderTokens] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('qr_client_order_tokens') || '[]');
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Current client active live orders status (STRICT ISOLATION: ONLY client's own order tokens)
+  const myLiveOrders = useMemo(() => {
     if (!currentTable) return [];
-    return orders.filter(o => o.tableCode === currentTable.code && o.status !== 'Annulée' && o.paymentStatus !== 'Payé');
-  }, [orders, currentTable]);
+    const submittedIds = submittedOrders.map(o => o.id);
+    return orders.filter(o => {
+      const isMyToken = o.orderAccessToken && clientOrderTokens.includes(o.orderAccessToken);
+      const isSubmittedLocally = submittedIds.includes(o.id);
+      return (isMyToken || isSubmittedLocally) && o.status !== 'Annulée' && o.paymentStatus !== 'Payé';
+    });
+  }, [orders, currentTable, clientOrderTokens, submittedOrders]);
 
   if (!currentTable) {
     return (
@@ -336,21 +350,21 @@ export const ClientTableOrderView: React.FC<ClientTableOrderViewProps> = ({
 
       <main className="max-w-lg mx-auto px-4 pt-4 space-y-4">
 
-        {/* Live Active Orders Notice for this Table */}
-        {currentTableLiveOrders.length > 0 && (
+        {/* Live Active Orders Notice for this Client */}
+        {myLiveOrders.length > 0 && (
           <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-3.5 shadow-sm space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-amber-950 uppercase tracking-wide flex items-center space-x-1.5">
                 <Clock className="w-4 h-4 text-amber-600 animate-spin" />
-                <span>Suivi Commandes en cours sur Table {currentTable.code}</span>
+                <span>Suivi de Mes Commandes (Table {currentTable.code})</span>
               </span>
               <span className="text-xs bg-amber-200 text-amber-950 font-black px-2.5 py-0.5 rounded-full">
-                {currentTableLiveOrders.length}
+                {myLiveOrders.length}
               </span>
             </div>
 
             <div className="space-y-2">
-              {currentTableLiveOrders.map(o => (
+              {myLiveOrders.map(o => (
                 <div key={o.id} className="bg-white p-2.5 rounded-xl border border-amber-200 flex items-center justify-between text-xs shadow-xs">
                   <div>
                     <span className="font-black text-slate-900">{o.code}</span>

@@ -1,4 +1,4 @@
-export type UserRole = 'Administrateur' | 'Chef' | 'Serveur' | 'Caissier' | 'Client';
+export type UserRole = 'PROPRIETAIRE' | 'EMPLOYE' | 'CUISINE' | 'GERANT' | 'SERVEUR' | 'CAISSIER' | 'Administrateur' | 'Chef' | 'Client' | 'Serveur' | 'Caissier' | 'owner' | 'employee' | 'kitchen';
 
 export type EstablishmentType = 
   | 'Restaurant' 
@@ -161,6 +161,7 @@ export interface Order {
   paymentStatus: PaymentStatus;
   payments: PaymentInfo[];
   generalNote?: string;
+  orderAccessToken?: string; // Private access token for public QR customer to consult only their own order
 }
 
 export interface CashRegisterSession {
@@ -272,6 +273,16 @@ export interface RegisteredRestaurant {
   pinCode?: string;
   createdAt: string;
   logoUrl?: string;
+}
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  phone: string;
+  role: UserRole;
+  pinCode?: string;
+  active: boolean;
+  createdAt: string;
 }
 
 export interface ActivityLog {

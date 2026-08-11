@@ -1,5 +1,6 @@
 import React from 'react';
 import { useResto } from '../context/RestoContext';
+import { isTabAllowedForRole, ROLE_LABELS } from '../lib/permissions';
 import { 
   LayoutDashboard, 
   Smartphone, 
@@ -17,7 +18,8 @@ import {
   QrCode,
   Building2,
   Plus,
-  Store
+  Store,
+  Users
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -35,6 +37,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { 
     currentRole, 
+    mvpRole,
+    permissions,
     orders, 
     stockItems, 
     suppliers, 
@@ -50,23 +54,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const totalSupplierDebtCount = suppliers.filter(s => s.totalDebtFcfa > 0).length;
 
   const navItems = [
-    { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['Administrateur', 'Chef', 'Serveur', 'Caissier', 'Client'] },
-    { id: 'pos', label: 'Commande Rapide (POS)', icon: Smartphone, roles: ['Administrateur', 'Serveur', 'Caissier'], highlight: true },
-    { id: 'client-menu', label: 'Commande QR Table', icon: QrCode, roles: ['Administrateur', 'Serveur', 'Caissier', 'Client'] },
-    { id: 'commandes', label: 'Commandes', icon: ShoppingBag, badge: activeOrdersCount, roles: ['Administrateur', 'Serveur', 'Caissier', 'Chef', 'Client'] },
-    { id: 'tables', label: 'Tables & Zones', icon: Grid3X3, roles: ['Administrateur', 'Serveur', 'Caissier'] },
-    { id: 'cuisine', label: 'Cuisine (KDS)', icon: ChefHat, badge: kitchenOrdersCount, badgeColor: 'bg-red-500', roles: ['Administrateur', 'Chef', 'Serveur'] },
-    { id: 'menu', label: 'Menu & Plats', icon: UtensilsCrossed, roles: ['Administrateur', 'Chef', 'Caissier', 'Serveur', 'Client'] },
-    { id: 'caisse', label: 'Caisse Journalière', icon: Coins, roles: ['Administrateur', 'Caissier'] },
-    { id: 'stock', label: 'Stocks & Dettes', icon: Boxes, badge: lowStockCount + totalSupplierDebtCount, badgeColor: 'bg-amber-500', roles: ['Administrateur', 'Chef', 'Caissier'] },
-    { id: 'livraisons', label: 'Livraisons & WhatsApp', icon: Truck, roles: ['Administrateur', 'Caissier', 'Serveur'] },
-    { id: 'finances', label: 'Dépenses & Finances', icon: Receipt, roles: ['Administrateur', 'Caissier'] },
-    { id: 'statistiques', label: 'Statistiques', icon: BarChart3, roles: ['Administrateur'] },
-    { id: 'parametres', label: 'Paramètres', icon: Settings, roles: ['Administrateur'] }
+    { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, allow: permissions.canViewDashboard },
+    { id: 'pos', label: 'Commande Rapide (POS)', icon: Smartphone, highlight: true, allow: permissions.canCreateOrder },
+    { id: 'client-menu', label: 'Commande QR Table', icon: QrCode, allow: permissions.canCreateOrder },
+    { id: 'commandes', label: 'Commandes', icon: ShoppingBag, badge: activeOrdersCount, allow: permissions.canCreateOrder || permissions.canTakePayment },
+    { id: 'tables', label: 'Tables & Zones', icon: Grid3X3, allow: permissions.canManageTables || mvpRole === 'EMPLOYE' },
+    { id: 'cuisine', label: 'Cuisine (KDS)', icon: ChefHat, badge: kitchenOrdersCount, badgeColor: 'bg-red-500', allow: permissions.canViewKitchen },
+    { id: 'menu', label: 'Menu & Plats', icon: UtensilsCrossed, allow: permissions.canViewMenu || permissions.canManageMenu },
+    { id: 'caisse', label: 'Caisse Journalière', icon: Coins, allow: permissions.canTakePayment },
+    { id: 'stock', label: 'Stocks & Dettes', icon: Boxes, badge: lowStockCount + totalSupplierDebtCount, badgeColor: 'bg-amber-500', allow: permissions.canViewReports },
+    { id: 'livraisons', label: 'Livraisons & WhatsApp', icon: Truck, allow: permissions.canCreateOrder || permissions.canTakePayment },
+    { id: 'finances', label: 'Dépenses & Finances', icon: Receipt, allow: permissions.canViewReports },
+    { id: 'statistiques', label: 'Statistiques', icon: BarChart3, allow: permissions.canViewReports },
+    { id: 'personnel', label: 'Personnel & Rôles', icon: Users, allow: permissions.canManageStaff },
+    { id: 'parametres', label: 'Paramètres', icon: Settings, allow: permissions.canManageSettings }
   ];
 
-  // Filter based on role permissions
-  const filteredNavItems = navItems.filter(item => item.roles.includes(currentRole));
+  // Filter items allowed for active role
+  const filteredNavItems = navItems.filter(item => item.allow);
 
   const handleSelect = (tabId: string) => {
     setActiveTab(tabId);
